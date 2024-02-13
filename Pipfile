@@ -1,0 +1,8 @@
+[packages]
+python-telegram-bot = "*"
+pymongo = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"

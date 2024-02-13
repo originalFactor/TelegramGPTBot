@@ -1,0 +1,13 @@
+{
+    "gpt-key": "Bearer XXXXX",
+    "gpt-url": "https://api.openai.com/",
+    "tg-token": "01234567:XXXXXXXX",
+    "gpt-custom": {
+        "temprature": 0.7,
+        "max_tokens": 512,
+        "user": "某公司"
+    },
+    "system-prompt": "你是在你们公司推出的万能服务项目工作的一名服务员，你的目标是完美的解决用户提出的要求或问题。",
+    "enable-history": true,
+    "enable-group-management": true
+}
