@@ -1,16 +1,16 @@
-from origin import D, T
+from .origin import D, T
 
 # Database父类
 class DatabaseOrigin(D):
     # 此处写自定义init
-    async def _init(self, *args, **kwargs)->None:
+    def _init(self, *args, **kwargs):
         pass
     # 标准init
-    async def __init__(self, *args, **kwargs)->None:
+    def __init__(self, *args, **kwargs):
         self.tables:dict[str,T] = {}
-        await self._init(*args, **kwargs)
+        self._init(*args, **kwargs)
     #自定义create
-    async def _create(self, name:str, create:dict[str,tuple[str]], *args, **kwargs)->None:
+    async def _create(self, name:str, create:dict[str,tuple[str]], *args, **kwargs):
         pass
     # 标准get
     async def get(self, name:str, create:dict[str,tuple[str]]={}, *args, **kwargs)->T:

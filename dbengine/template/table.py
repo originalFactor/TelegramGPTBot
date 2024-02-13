@@ -1,13 +1,13 @@
 from .origin import T, D
 
 class TableOrigin(T):
-    async def _init(self, *args, **kwargs)->None:
+    async def _init(self, *args, **kwargs):
         pass
-    async def __init__(self, *args, **kwargs) -> None:
+    async def __init__(self, *args, **kwargs):
         await self._init(*args, **kwargs)
-    async def _new(self, *args, **kwargs) -> None:
+    async def _new(self, *args, **kwargs):
         pass
-    async def new(self, data:dict[str,any], *args, **kwargs)->None:
+    async def new(self, data:dict[str,any], *args, **kwargs):
         await self._new(data=data,*args,**kwargs)
     async def _get(self, *args, **kwargs)->list:
         return []

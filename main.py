@@ -8,6 +8,7 @@ from random import choices
 from string import ascii_letters
 from argparse import ArgumentParser
 from sys import exit as sexit
+from typing import Union
 
 # 获取命令行参数
 argparser = ArgumentParser(
@@ -47,7 +48,7 @@ async def randCode(k:int=8)->str:
 
 # 初始化SQLite3
 if config.get('enable-history'):
-    db = Database(
+    db = await Database(
         config.get('database','tgGPTbotdb'),
         config.get('mongo-host','mongodb://127.0.0.1:27017')
     )
@@ -121,7 +122,7 @@ async def add_message(message:str,chatId:str,role:str='user'):
         })
 
 # 获取消息
-async def get_messages(message:str,chatId:str=''):
+async def get_messages(message:str,chatId:str='')->list[dict[str,str]]:
     messages = []
     if config.get('enable-history') and chatId:
         messages = await db.get(

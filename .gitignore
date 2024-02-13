@@ -1,3 +1,4 @@
 *.json
 *.db
 !template*.json
+**/__pycache__
