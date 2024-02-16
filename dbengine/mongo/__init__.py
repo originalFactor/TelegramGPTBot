@@ -14,4 +14,9 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with TelegramGPTBot.  If not, see <http://www.gnu.org/licenses/>.
+from . import database, table
 
+__all__ = [
+    "database",
+    "table"
+]
