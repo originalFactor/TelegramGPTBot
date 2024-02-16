@@ -46,18 +46,17 @@ if config.get("enable-history"):
 async def randCode(k:int=8)->str:
     return ''.join(choices(ascii_letters+'0123456789',k=k))
 
-# 初始化SQLite3
+# 初始化数据库
 if config.get('enable-history'):
-    db = await Database(
+    db = Database(
         config.get('database','tgGPTbotdb'),
         config.get('mongo-host','mongodb://127.0.0.1:27017')
     )
 
 # 用于处理/start命令的函数
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="您好！我是ChatGPT，很高兴为您提供帮助。"
+    await update.message.reply_text(
+        "您好！我是ChatGPT，很高兴为您提供帮助。"
     )
 
 # 处理私聊和群聊
@@ -71,9 +70,10 @@ async def handle_message(update: Update, context:ContextTypes.DEFAULT_TYPE):
                     flag = True
     if context.bot.username in update.message.text: flag = True
     if not flag: return
-    reply = await chatgpt_reply(update.message.text,update.effective_chat.id)
-    reply = f'{reply[0]} \n    本次共使用{reply[1]}token'
-    await update.message.reply_text(reply)
+    reply = await chatgpt_reply(update.message.text,'chat'+str(update.effective_chat.id))
+    await update.message.reply_text(
+        f'{reply[0]}\r\n\t本次共使用{reply[1]}token'
+    )
 
 # 处理inline-mode，目前有问题
 async def handle_inline_message(update:Update, context:ContextTypes.DEFAULT_TYPE):
@@ -109,14 +109,14 @@ async def chatgpt_reply(message:str,chatId:str='')->tuple[str,int]:
 # 增加消息
 async def add_message(message:str,chatId:str,role:str='user'):
     if config.get('enable-history'):
-        await db.get(
-            chatId,
+        await (await db.get(
+            str(chatId),
             {
                 "id": ("INTEGER","PRIMARY KEY","NOT NULL"),
                 "role": ("TEXT","NOT NULL"),
                 "content": ("TEXT","NOT NULL")
             }
-        ).new({
+        )).new({
             "role": role,
             "content": message
         })
@@ -125,24 +125,24 @@ async def add_message(message:str,chatId:str,role:str='user'):
 async def get_messages(message:str,chatId:str='')->list[dict[str,str]]:
     messages = []
     if config.get('enable-history') and chatId:
-        messages = await db.get(
+        messages = await (await db.get(
             chatId,
             {
                 "id": ("INTEGER","PRIMARY KEY","NOT NULL"),
                 "role": ("TEXT","NOT NULL"),
                 "content": ("TEXT","NOT NULL")
             },
-        ).get({},('role','content'))
+        )).get({},('role','content'))
         await add_message(message,chatId)
-    return [
+    return list([
         {
             "role": "system",
             "content": config.get('system-prompt','')
         }
     ] + [
         {
-            "role": _[1],
-            "content": _[2]
+            "role": list(_)[1],
+            "content": list(_)[2]
         }
         for _ in messages
     ] + [
@@ -150,7 +150,7 @@ async def get_messages(message:str,chatId:str='')->list[dict[str,str]]:
             "role": 'user',
             "content": message
         }
-    ]
+    ])
 
 # GPT底层
 async def chatGPT_request(
@@ -159,12 +159,6 @@ async def chatGPT_request(
     chatId:str='',
     **kwargs
 )->dict[str,str,int,list[dict[int,dict[str,str],str]],dict[int,int,int]]:
-    api_url = config.get('gpt-url','https://api.openai.com/')+'v1/chat/completions'
-    api_header = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": config.get('gpt-key',''),
-    }
     api_data = {
         "model": model,
         "messages": await get_messages(prompt,chatId)
@@ -172,19 +166,41 @@ async def chatGPT_request(
     for key in kwargs.keys():
         api_data[key] = kwargs[key]
     json_data = dumps(api_data).encode()
-    logging.info(json_data)
+    logger.info(json_data)
     response = post(
-        url=api_url,
-        headers=api_header,
+        url=config.get('gpt-url','https://api.openai.com/')+'v1/chat/completions',
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": config.get('gpt-key',''),
+        },
         data=json_data,
         timeout=10000
     )
-    logging.info(response.text)
+    logger.info(response.text)
     return response.json()
 
 # 未知命令处理
 async def unknown(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(update.effective_chat.id,"Sorry, I didn't understand that command.")
+    await update.message.reply_text("Sorry, I didn't understand that command.")
+
+# 清除聊天记录
+async def clean_history(update:Update, context:ContextTypes.DEFAULT_TYPE):
+    if context.args:
+        await db.remove('chat'+context.args[0])
+        await update.message.reply_text(
+            f"Successfully cleaned message histories in chatid {context.args[0]}."
+        )
+    else:
+        if await db.exists('chat'+str(update.effective_chat.id)):
+            await (await db.get('chat'+str(update.effective_chat.id))).remove({})
+            await update.message.reply_text(
+                f"Successfully cleaned message histories in current chatid {update.effective_chat.id}."
+            )
+        else:
+            await update.message.reply_text(
+                f"No exist message history in current chatid {update.effective_chat.id}."
+            )
 
 # 主程序
 if __name__ == "__main__":
@@ -193,6 +209,10 @@ if __name__ == "__main__":
         CommandHandler(
             'start',
             start
+        ),
+        CommandHandler(
+            'cleanHistory',
+            clean_history
         ),
         MessageHandler(
             filters.TEXT&\
@@ -204,5 +224,5 @@ if __name__ == "__main__":
             unknown
         )
     ])
-    application.add_handler(InlineQueryHandler(handle_inline_message),1)
+    application.add_handler(InlineQueryHandler(handle_inline_message),255)
     application.run_polling()

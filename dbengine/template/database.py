@@ -6,9 +6,9 @@ class DatabaseOrigin(D):
     def _init(self, *args, **kwargs):
         pass
     # 标准init
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name:str, *args, **kwargs):
         self.tables:dict[str,T] = {}
-        self._init(*args, **kwargs)
+        self._init(name, *args, **kwargs)
     #自定义create
     async def _create(self, name:str, create:dict[str,tuple[str]], *args, **kwargs):
         pass
@@ -17,3 +17,9 @@ class DatabaseOrigin(D):
         if name not in self.tables:
             await self._create(name=name, create=create, *args, **kwargs)
         return self.tables[name]
+    async def _remove(self, *args, **kwargs):
+        pass
+    async def remove(self, name:str, *args, **kwargs):
+        await self._remove(name, *args, **kwargs)
+    async def exists(self, name:str):
+        return name in self.tables.keys()
